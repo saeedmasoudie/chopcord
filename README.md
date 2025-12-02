@@ -2,14 +2,14 @@
 <p align="center">
 <img src="logo.png" alt="Chopcord Logo" width="180"/>
 </p>
-<h1 align="center">🪓 Chopcord</h1>
+<h1 align="center">Chopcord</h1>
 <h3 align="center">A Lightweight, Secure, Multi‑User Discord Client --- powered byPyWebview</h3>
 <p align="center">
-<a href="#download"><b>📥 Download</b></a>•
-<a href="#features"><b>⭐ Features</b></a>•
-<a href="#screenshots"><b>📸 Screenshots</b></a> •
-<a href="#roadmap"><b>🛣️ Roadmap</b></a>•
-<a href="#donate"><b>❤️ Donate</b></a>
+<a href="#download"><b>Download</b></a>•
+<a href="#features"><b>Features</b></a>•
+<a href="#screenshots"><b>Screenshots</b></a> •
+<a href="#roadmap"><b>Roadmap</b></a>•
+<a href="#donate"><b>Donate</b></a>
 </p>
 
 ------------------------------------------------------------------------
