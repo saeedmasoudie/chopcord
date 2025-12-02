@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  :root { --accent: #5865F2; --bg: #09090b; --text: #e4e4e7; }
+  body {
+    background-color: var(--bg); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; height: 100vh; margin: 0;
+    font-family: 'Segoe UI', system-ui, sans-serif; color: var(--text); overflow: hidden;
+  }
+  .loader-container { position: relative; display: flex; flex-direction: column; align-items: center; z-index: 10; }
+  .logo-wrapper {
+    width: 100px; height: 100px; background: rgba(255,255,255,0.05);
+    border-radius: 20px; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 30px rgba(88, 101, 242, 0.2); margin-bottom: 25px;
+    overflow: hidden;
+  }
+  .logo-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+  .logo-placeholder { font-size: 30px; font-weight: bold; color: #555; }
+  h1 {
+    font-size: 24px; font-weight: 800; letter-spacing: 4px; margin: 0;
+    background: linear-gradient(90deg, #fff, #a1a1aa); -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent; text-transform: uppercase;
+  }
+  p { font-size: 12px; color: #71717a; margin-top: 8px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; }
+  .progress-track {
+    width: 200px; height: 4px; background: #27272a; border-radius: 2px;
+    margin-top: 30px; overflow: hidden; position: relative;
+  }
+  .progress-bar {
+    position: absolute; top: 0; left: 0; bottom: 0; width: 50%;
+    background: var(--accent); box-shadow: 0 0 10px var(--accent);
+    animation: slide 2s infinite ease-in-out;
+  }
+  @keyframes slide { 0% { left: -50%; } 100% { left: 100%; } }
+</style>
+</head>
+<body>
+  <div class="loader-container">
+    <div class="logo-wrapper">
+      <img src="{logo_src}" onerror="this.style.display='none';document.getElementById('ph').style.display='block'">
+      <div id="ph" class="logo-placeholder" style="display:none">APP</div>
+    </div>
+    <h1>ChopCord</h1>
+    <p>Initializing Secure Environment...</p>
+    <div class="progress-track"><div class="progress-bar"></div></div>
+  </div>
+</body>
+</html>

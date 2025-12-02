@@ -69,8 +69,8 @@ changing how Discord works.**
 
 <p align="center">
 <img src="screenshots/main.png" width="70%"/><br><em>Main Interface</em><br><br>
-<img src="screenshots/accounts.png" width="70%"/><br><em>Fast Account Switcher</em><br><br>
-<img src="screenshots/downloads.png" width="70%"/><br><em>Download Manager</em>
+<img src="screenshots/downloads.png" width="70%"/><br><em>Download Manager</em><br><br>
+<img src="screenshots/network.png" width="70%"/><br><em>Network Settings</em>
 </p>
 
 ------------------------------------------------------------------------

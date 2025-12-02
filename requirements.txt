@@ -1,0 +1,6 @@
+pywebview
+requests
+pystray
+Pillow
+cryptography
+pysocks
