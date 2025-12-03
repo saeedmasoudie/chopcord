@@ -203,9 +203,13 @@ def apply_network_settings(proxy, dns):
     os.environ.pop("no_proxy", None)
 
     flags = [
-        "--disk-cache-size=1073741824", "--disable-background-timer-throttling",
-        "--disable-renderer-backgrounding", "--autoplay-policy=no-user-gesture-required",
-        "--enable-smooth-scrolling", "--enable-features=WebRTC-H264WithOpenH264FFmpeg"
+        "--disk-cache-size=2147483648",
+        "--disable-background-timer-throttling",
+        "--disable-renderer-backgrounding",
+        "--autoplay-policy=no-user-gesture-required",
+        "--enable-smooth-scrolling",
+        "--enable-features=WebRTC-H264WithOpenH264FFmpeg,NetworkService,NetworkServiceInProcess",
+        "--disable-features=DisallowNoneCookies"
     ]
     if proxy:
         flags.append(f"--proxy-server={proxy}")
@@ -246,13 +250,22 @@ def run_tray():
 
 def connection_monitor(window):
     last_status = True
+    fail_count = 0
+    FAIL_TOLERANCE = 3
+
     while True:
         time.sleep(5.0)
         try:
-            requests.head("https://discord.com", timeout=3)
+            requests.head("https://discord.com", timeout=8)
+            fail_count = 0
             current_status = True
         except:
-            current_status = False
+            fail_count += 1
+            if fail_count >= FAIL_TOLERANCE:
+                current_status = False
+            else:
+                current_status = True
+
         if current_status != last_status:
             safe_bool = "true" if current_status else "false"
             try:
@@ -550,7 +563,7 @@ def main():
     while True:
         start_offline = False
         try:
-            requests.head("https://discord.com", timeout=5)
+            requests.head("https://discord.com", timeout=10)
         except:
             start_offline = True
 
