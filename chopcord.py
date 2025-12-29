@@ -19,8 +19,17 @@ from PIL import Image, ImageDraw
 from cryptography.fernet import Fernet
 
 APP_NAME = "ChopCord"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 SINGLE_INSTANCE_PORT = 53535
+
+
+def get_resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, relative_path)
+
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.expanduser("~"), ".chopcord_secure"))
 CONFIG_FILE = os.path.join(BASE_DIR, "global_config.enc")
@@ -28,10 +37,10 @@ KEY_FILE = os.path.join(BASE_DIR, "secret.key")
 PROFILES_DIR = os.path.join(BASE_DIR, "profiles")
 MEDIA_DIR = os.path.join(BASE_DIR, "cache")
 DOWNLOADS_DIR = os.path.join(BASE_DIR, "downloads")
-ASSETS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
-WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
+ASSETS_DIR = get_resource_path("assets")
+WEB_DIR = get_resource_path("web")
 
-for d in [BASE_DIR, PROFILES_DIR, MEDIA_DIR, DOWNLOADS_DIR, ASSETS_DIR]:
+for d in [BASE_DIR, PROFILES_DIR, MEDIA_DIR, DOWNLOADS_DIR]:
     os.makedirs(d, exist_ok=True)
 
 
@@ -129,7 +138,7 @@ data_handler = AtomicDataHandler()
 
 
 def get_logo_base64():
-    local_logo = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.png")
+    local_logo = os.path.join(ASSETS_DIR, "logo.png")
     if os.path.exists(local_logo):
         try:
             with open(local_logo, "rb") as img_file:
@@ -159,7 +168,7 @@ class WindowManager:
         self.active_window = w
 
     def restart_app(self, profile_name):
-        self.next_profile = profile_name;
+        self.next_profile = profile_name
         self.should_restart = True
         try:
             self.active_window.destroy()
@@ -228,11 +237,21 @@ def apply_network_settings(proxy, dns):
 
 
 def create_tray_icon(has_warning=False):
-    image = Image.new('RGB', (64, 64), (30, 31, 34))
-    dc = ImageDraw.Draw(image)
-    dc.rectangle((0, 0, 64, 64), fill=(30, 31, 34))
-    dc.rectangle((16, 16, 48, 48), fill=(88, 101, 242))
+    tray_logo_path = os.path.join(ASSETS_DIR, "logo.png")
+    if os.path.exists(tray_logo_path):
+        try:
+            image = Image.open(tray_logo_path)
+            image = image.resize((64, 64))
+        except:
+            image = Image.new('RGB', (64, 64), (30, 31, 34))
+    else:
+        image = Image.new('RGB', (64, 64), (30, 31, 34))
+        dc = ImageDraw.Draw(image)
+        dc.rectangle((0, 0, 64, 64), fill=(30, 31, 34))
+        dc.rectangle((16, 16, 48, 48), fill=(88, 101, 242))
+
     if has_warning:
+        dc = ImageDraw.Draw(image)
         dc.ellipse((40, 0, 64, 24), fill="#da373c", outline="#1e1f22", width=2)
         dc.text((47, 2), "!", fill="white", font_size=20)
     return image
@@ -254,6 +273,9 @@ def connection_monitor(window):
     FAIL_TOLERANCE = 3
 
     while True:
+        if not wm.active_window:
+            break
+
         time.sleep(5.0)
         try:
             requests.head("https://discord.com", timeout=8)
@@ -314,9 +336,10 @@ class EncryptedMediaHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(data)
         except:
-            self.send_response(500);
+            self.send_response(500)
             self.end_headers()
 
+server_ready_event = threading.Event()
 
 def start_media_server():
     for _ in range(3):
@@ -325,6 +348,7 @@ def start_media_server():
             server.allow_reuse_address = True
             t = threading.Thread(target=server.serve_forever, daemon=True)
             t.start()
+            server_ready_event.set()
             return server, server.server_address[1]
         except OSError:
             pass
@@ -530,9 +554,7 @@ class ChopCordAPI:
 
 def inject_core(window):
     try:
-        base = os.path.dirname(os.path.abspath(__file__))
-        js_path = os.path.join(base, 'web', 'injector.js')
-        if not os.path.exists(js_path): js_path = os.path.join(base, 'injector.js')
+        js_path = os.path.join(WEB_DIR, 'injector.js')
         if os.path.exists(js_path):
             with open(js_path, 'r', encoding='utf-8') as fh: window.evaluate_js(fh.read() + ";true;")
     except:
@@ -557,7 +579,9 @@ def main():
 
     t_update.join(timeout=1.0)
     threading.Thread(target=run_tray, daemon=True).start()
+
     server, media_port = start_media_server()
+    server_ready_event.wait(timeout=5)
     wm.media_port = media_port
 
     while True:
