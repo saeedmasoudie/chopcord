@@ -35,8 +35,9 @@ def get_resource_path(relative_path):
     return os.path.join(base_dir, relative_path)
 
 
-
-BASE_DIR = os.path.abspath(os.path.join(os.path.expanduser("~"), ".chopcord_secure"))
+BASE_DIR = os.path.abspath(
+    os.path.join(os.path.expanduser("~"), ".chopcord_secure")
+)
 CONFIG_FILE = os.path.join(BASE_DIR, "global_config.enc")
 KEY_FILE = os.path.join(BASE_DIR, "secret.key")
 PROFILES_DIR = os.path.join(BASE_DIR, "profiles")
@@ -44,12 +45,14 @@ MEDIA_DIR = os.path.join(BASE_DIR, "cache")
 DOWNLOADS_DIR = os.path.join(BASE_DIR, "downloads")
 ASSETS_DIR = get_resource_path("assets")
 WEB_DIR = get_resource_path("web")
+
 if not os.path.exists(WEB_DIR):
     print("ERROR: web directory missing:", WEB_DIR)
 
 
 for d in [BASE_DIR, PROFILES_DIR, MEDIA_DIR, DOWNLOADS_DIR]:
     os.makedirs(d, exist_ok=True)
+
 
 def open_file(path):
     try:
@@ -81,6 +84,7 @@ def reveal_file(path):
             subprocess.Popen(["xdg-open", os.path.dirname(path)])
     except Exception as e:
         print("Reveal file failed:", e)
+
 
 def notify(title, message):
     try:
@@ -138,7 +142,7 @@ class SingleInstanceLock:
         if self._locked:
             try:
                 self.socket.close()
-            except:
+            except Exception:
                 pass
 
 
@@ -149,11 +153,16 @@ class UpdateManager:
     def __init__(self):
         self.update_available = False
         self.latest_version = APP_VERSION
-        self.release_url = "https://github.com/saeedmasoudie/chopcord/releases/latest"
+        self.release_url = (
+            "https://github.com/saeedmasoudie/chopcord/releases/latest"
+        )
 
     def check_updates(self):
         try:
-            r = requests.get("https://api.github.com/repos/saeedmasoudie/chopcord/releases/latest", timeout=5)
+            r = requests.get(
+                "https://api.github.com/repos/saeedmasoudie/chopcord/releases/latest",
+                timeout=5
+            )
             if r.status_code == 200:
                 data = r.json()
                 remote_ver = data.get('tag_name', '').strip()
@@ -161,8 +170,9 @@ class UpdateManager:
                     self.update_available = True
                     self.latest_version = remote_ver
                     self.release_url = data.get('html_url', self.release_url)
-        except:
+        except Exception:
             pass
+
 
 updater = UpdateManager()
 
@@ -174,7 +184,8 @@ class AtomicDataHandler:
         self.lock = threading.Lock()
 
     def _load_or_create_key(self):
-        if os.path.exists(KEY_FILE): return Path(KEY_FILE).read_bytes()
+        if os.path.exists(KEY_FILE):
+            return Path(KEY_FILE).read_bytes()
         k = Fernet.generate_key()
         Path(KEY_FILE).write_bytes(k)
         return k
@@ -185,7 +196,7 @@ class AtomicDataHandler:
     def decrypt_data(self, encrypted_bytes):
         try:
             return json.loads(self.cipher.decrypt(encrypted_bytes).decode())
-        except:
+        except Exception:
             return {}
 
     def save_json_secure(self, filepath, data):
@@ -194,19 +205,21 @@ class AtomicDataHandler:
             try:
                 with open(temp_path, 'wb') as f:
                     f.write(self.encrypt_data(data))
-                if os.path.exists(filepath): os.remove(filepath)
+                if os.path.exists(filepath):
+                    os.remove(filepath)
                 os.rename(temp_path, filepath)
                 return True
-            except:
+            except Exception:
                 return False
 
     def load_json_secure(self, filepath):
         with self.lock:
-            if not os.path.exists(filepath): return {}
+            if not os.path.exists(filepath):
+                return {}
             try:
                 with open(filepath, 'rb') as f:
                     return self.decrypt_data(f.read())
-            except:
+            except Exception:
                 return {}
 
 
@@ -218,8 +231,10 @@ def get_logo_base64():
     if os.path.exists(local_logo):
         try:
             with open(local_logo, "rb") as img_file:
-                return "data:image/png;base64," + base64.b64encode(img_file.read()).decode('utf-8')
-        except:
+                return "data:image/png;base64," + base64.b64encode(
+                    img_file.read()
+                ).decode('utf-8')
+        except Exception:
             pass
     return ""
 
@@ -248,13 +263,13 @@ class WindowManager:
         self.should_restart = True
         try:
             self.active_window.destroy()
-        except:
+        except Exception:
             sys.exit(0)
 
     def minimize(self):
         try:
             self.active_window.minimize()
-        except:
+        except Exception:
             pass
 
     def maximize(self):
@@ -263,14 +278,14 @@ class WindowManager:
                 self.active_window.toggle_fullscreen()
             elif hasattr(self.active_window, 'maximize'):
                 self.active_window.maximize()
-        except:
+        except Exception:
             pass
 
     def close_app(self):
         try:
             if self.active_window:
                 self.active_window.destroy()
-        except:
+        except Exception:
             pass
         finally:
             sys.exit(0)
@@ -278,7 +293,7 @@ class WindowManager:
     def restore_window(self):
         try:
             self.active_window.restore()
-        except:
+        except Exception:
             pass
 
 
@@ -309,10 +324,15 @@ def apply_network_settings(proxy, dns):
         flags.append("--enable-features=DnsOverHttps<DoHTrial")
         flags.append("--force-effective-connection-type=4g")
         if "1.1.1.1" in dns:
-            flags.append("--dns-over-https-templates=https://cloudflare-dns.com/dns-query")
+            flags.append(
+                "--dns-over-https-templates=https://cloudflare-dns.com/dns-query"
+            )
         elif "8.8.8.8" in dns:
-            flags.append("--dns-over-https-templates=https://dns.google/dns-query")
-    if platform.system() == "Windows": os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = " ".join(flags)
+            flags.append(
+                "--dns-over-https-templates=https://dns.google/dns-query"
+            )
+    if platform.system() == "Windows":
+        os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = " ".join(flags)
 
 
 def create_tray_icon(has_warning=False):
@@ -321,7 +341,7 @@ def create_tray_icon(has_warning=False):
         try:
             image = Image.open(tray_logo_path)
             image = image.resize((64, 64))
-        except:
+        except Exception:
             image = Image.new('RGB', (64, 64), (30, 31, 34))
     else:
         image = Image.new('RGB', (64, 64), (30, 31, 34))
@@ -331,7 +351,9 @@ def create_tray_icon(has_warning=False):
 
     if has_warning:
         dc = ImageDraw.Draw(image)
-        dc.ellipse((40, 0, 64, 24), fill="#da373c", outline="#1e1f22", width=2)
+        dc.ellipse(
+            (40, 0, 64, 24), fill="#da373c", outline="#1e1f22", width=2
+        )
         dc.text((47, 2), "!", fill="white", font_size=20)
     return image
 
@@ -341,10 +363,15 @@ def run_tray():
         icon.stop()
         wm.close_app()
 
-    def on_show(icon, item): wm.restore_window()
+    def on_show(icon, item):
+        wm.restore_window()
 
     menu = TrayMenu(TrayItem("Show", on_show), TrayItem("Quit", on_quit))
-    icon = TrayIcon("ChopCord", create_tray_icon(updater.update_available), menu=menu)
+    icon = TrayIcon(
+        "ChopCord",
+        create_tray_icon(updater.update_available),
+        menu=menu
+    )
     icon.run()
 
 
@@ -362,7 +389,7 @@ def connection_monitor(window):
             requests.head("https://discord.com", timeout=8)
             fail_count = 0
             current_status = True
-        except:
+        except Exception:
             fail_count += 1
             if fail_count >= FAIL_TOLERANCE:
                 current_status = False
@@ -372,11 +399,17 @@ def connection_monitor(window):
         if current_status != last_status:
             safe_bool = "true" if current_status else "false"
             try:
-                window.evaluate_js(f"if(window.setDiscordStatus) window.setDiscordStatus({safe_bool});")
+                window.evaluate_js(
+                    f"if(window.setDiscordStatus) "
+                    f"window.setDiscordStatus({safe_bool});"
+                )
                 if current_status:
                     window.evaluate_js(
-                        "if(window.location.pathname === '/' || window.location.pathname === '') window.location.href = '/app';")
-            except:
+                        "if(window.location.pathname === '/' || "
+                        "window.location.pathname === '') "
+                        "window.location.href = '/app';"
+                    )
+            except Exception:
                 pass
             last_status = current_status
 
@@ -386,22 +419,28 @@ def _safe_fname_from_url(url: str) -> str:
         parsed = urllib.parse.urlparse(url)
         clean_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
         ext = os.path.splitext(parsed.path)[1].lower()
-        if not ext and 'attachments' in url: ext = '.bin'
+        if not ext and 'attachments' in url:
+            ext = '.bin'
         h = hashlib.sha256(clean_url.encode('utf-8')).hexdigest()
         return f"{h}{ext}"
-    except:
+    except Exception:
         return ""
 
 
 class EncryptedMediaHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
-        if not self.path.startswith('/media/'): return super().do_GET()
+        if not self.path.startswith('/media/'):
+            return super().do_GET()
         try:
             fname = self.path.split('/media/', 1)[1]
             enc_path = os.path.join(MEDIA_DIR, fname + '.enc')
             data = None
-            if os.path.exists(enc_path): data = data_handler.cipher.decrypt(open(enc_path, 'rb').read())
-            if data is None: self.send_response(404); self.end_headers(); return
+            if os.path.exists(enc_path):
+                data = data_handler.cipher.decrypt(open(enc_path, 'rb').read())
+            if data is None:
+                self.send_response(404)
+                self.end_headers()
+                return
             ct = 'application/octet-stream'
             if fname.endswith(('.jpg', '.jpeg')):
                 ct = 'image/jpeg'
@@ -416,16 +455,20 @@ class EncryptedMediaHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(data)
-        except:
+        except Exception:
             self.send_response(500)
             self.end_headers()
 
+
 server_ready_event = threading.Event()
+
 
 def start_media_server():
     for _ in range(3):
         try:
-            server = socketserver.ThreadingTCPServer(('127.0.0.1', 0), EncryptedMediaHandler)
+            server = socketserver.ThreadingTCPServer(
+                ('127.0.0.1', 0), EncryptedMediaHandler
+            )
             server.allow_reuse_address = True
             t = threading.Thread(target=server.serve_forever, daemon=True)
             t.start()
@@ -445,21 +488,32 @@ def _download_worker(url, is_explicit_user_download):
         if is_explicit_user_download:
             try:
                 real_name = os.path.basename(urllib.parse.urlparse(url).path)
-                if not real_name: real_name = filename
-                if not os.path.splitext(real_name)[1]: real_name += os.path.splitext(filename)[1]
+                if not real_name:
+                    real_name = filename
+                if not os.path.splitext(real_name)[1]:
+                    real_name += os.path.splitext(filename)[1]
                 final_path = os.path.join(DOWNLOADS_DIR, real_name)
                 base, ext = os.path.splitext(real_name)
                 counter = 1
                 while os.path.exists(final_path):
-                    final_path = os.path.join(DOWNLOADS_DIR, f"{base}_{counter}{ext}")
+                    final_path = os.path.join(
+                        DOWNLOADS_DIR, f"{base}_{counter}{ext}"
+                    )
                     counter += 1
-            except:
+            except Exception:
                 final_path = os.path.join(DOWNLOADS_DIR, filename)
         else:
             final_path = os.path.join(MEDIA_DIR, filename + ".tmp")
 
-        _download_states[url] = {'progress': 0, 'status': 'downloading', 'filename': os.path.basename(final_path)}
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+        _download_states[url] = {
+            'progress': 0,
+            'status': 'downloading',
+            'filename': os.path.basename(final_path)
+        }
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                          "AppleWebKit/537.36"
+        }
         r = requests.get(url, headers=headers, stream=True, timeout=30)
         r.raise_for_status()
         total_length = int(r.headers.get('content-length', 0))
@@ -469,15 +523,20 @@ def _download_worker(url, is_explicit_user_download):
                 if chunk:
                     f.write(chunk)
                     dl += len(chunk)
-                    if total_length: _download_states[url]['progress'] = int((dl / total_length) * 100)
+                    if total_length:
+                        _download_states[url]['progress'] = int(
+                            (dl / total_length) * 100
+                        )
         if not is_explicit_user_download:
             try:
                 enc_path = os.path.join(MEDIA_DIR, filename + '.enc')
-                with open(final_path, 'rb') as src, open(enc_path, 'wb') as dest:
+                with open(final_path, 'rb') as src, \
+                        open(enc_path, 'wb') as dest:
                     dest.write(data_handler.cipher.encrypt(src.read()))
-            except:
+            except Exception:
                 pass
-            if os.path.exists(final_path): os.remove(final_path)
+            if os.path.exists(final_path):
+                os.remove(final_path)
         _download_states[url]['status'] = 'done'
         _download_states[url]['progress'] = 100
     except Exception as e:
@@ -508,7 +567,8 @@ class ChopCordAPI:
         cur = self.get_config()
         cur.update(cfg)
         data_handler.save_json_secure(CONFIG_FILE, cur)
-        if '__clear_cache' in cfg and cfg['__clear_cache']: self.clear_cache()
+        if '__clear_cache' in cfg and cfg['__clear_cache']:
+            self.clear_cache()
         return "ok"
 
     def create_profile(self, name):
@@ -520,7 +580,8 @@ class ChopCordAPI:
         profiles = ["Default"]
         if os.path.exists(PROFILES_DIR):
             for f in os.listdir(PROFILES_DIR):
-                if os.path.isdir(os.path.join(PROFILES_DIR, f)): profiles.append(f)
+                if os.path.isdir(os.path.join(PROFILES_DIR, f)):
+                    profiles.append(f)
         return [{"id": n, "name": n} for n in profiles]
 
     def switch_profile(self, name):
@@ -530,8 +591,11 @@ class ChopCordAPI:
         wm.restart_app(wm.active_profile_name)
 
     def start_download(self, url):
-        if not url or not url.startswith('http'): return "error"
-        threading.Thread(target=_download_worker, args=(url, True), daemon=True).start()
+        if not url or not url.startswith('http'):
+            return "error"
+        threading.Thread(
+            target=_download_worker, args=(url, True), daemon=True
+        ).start()
         return "started"
 
     def get_download_status(self, url):
@@ -541,32 +605,46 @@ class ChopCordAPI:
         try:
             fname = _safe_fname_from_url(url)
             dl_path = os.path.join(DOWNLOADS_DIR, fname)
-            if os.path.exists(dl_path): return fname
+            if os.path.exists(dl_path):
+                return fname
             base_name = os.path.basename(urllib.parse.urlparse(url).path)
-            if base_name and os.path.exists(os.path.join(DOWNLOADS_DIR, base_name)): return base_name
+            if base_name and os.path.exists(
+                os.path.join(DOWNLOADS_DIR, base_name)
+            ):
+                return base_name
             return False
-        except:
+        except Exception:
             return False
 
     def get_cache_stats(self):
         try:
-            if not os.path.exists(MEDIA_DIR): return {"count": 0, "size_mb": 0}
+            if not os.path.exists(MEDIA_DIR):
+                return {"count": 0, "size_mb": 0}
             files = [f for f in os.listdir(MEDIA_DIR) if f.endswith('.enc')]
-            total_size = sum(os.path.getsize(os.path.join(MEDIA_DIR, f)) for f in files)
-            return {"count": len(files), "size_mb": round(total_size / (1024 * 1024), 2)}
-        except:
+            total_size = sum(
+                os.path.getsize(os.path.join(MEDIA_DIR, f)) for f in files
+            )
+            return {
+                "count": len(files),
+                "size_mb": round(total_size / (1024 * 1024), 2)
+            }
+        except Exception:
             return {"count": 0, "size_mb": 0}
 
     def get_downloads_list(self):
         try:
             files = []
-            if not os.path.exists(DOWNLOADS_DIR): return []
+            if not os.path.exists(DOWNLOADS_DIR):
+                return []
             for f in os.listdir(DOWNLOADS_DIR):
                 path = os.path.join(DOWNLOADS_DIR, f)
                 if os.path.isfile(path):
-                    files.append({"name": f, "size": round(os.path.getsize(path) / (1024 * 1024), 2)})
+                    files.append({
+                        "name": f,
+                        "size": round(os.path.getsize(path) / (1024 * 1024), 2)
+                    })
             return files
-        except:
+        except Exception:
             return []
 
     def open_downloaded_file(self, filename):
@@ -586,22 +664,32 @@ class ChopCordAPI:
                 os.startfile(p)
             else:
                 subprocess.Popen(["xdg-open", p])
-        except:
+        except Exception:
             pass
 
     def delete_download(self, filename):
         try:
             path = os.path.join(DOWNLOADS_DIR, os.path.basename(filename))
-            if os.path.exists(path): os.remove(path); return True
-        except:
+            if os.path.exists(path):
+                os.remove(path)
+                return True
+        except Exception:
             pass
         return False
 
     def check_proxy_connection(self, proxy_url):
         try:
             proxies = {"http": proxy_url, "https": proxy_url}
-            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-            requests.get("https://www.google.com", headers=headers, proxies=proxies, timeout=10)
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                              "AppleWebKit/537.36"
+            }
+            requests.get(
+                "https://www.google.com",
+                headers=headers,
+                proxies=proxies,
+                timeout=10
+            )
             return True
         except Exception as e:
             print(f"Proxy Check Failed: {e}")
@@ -631,6 +719,7 @@ def inject_core(window):
     except Exception as e:
         print("JS inject failed:", e)
 
+
 def on_loaded(window):
     url = window.get_current_url()
     if url and "discord.com" in url and url.startswith("https://"):
@@ -639,7 +728,8 @@ def on_loaded(window):
 
 
 def main():
-    if not app_lock.try_lock(): sys.exit(0)
+    if not app_lock.try_lock():
+        sys.exit(0)
     t_update = threading.Thread(
         target=updater.check_updates,
         daemon=True
@@ -667,14 +757,17 @@ def main():
         start_offline = False
         try:
             requests.head("https://discord.com", timeout=10)
-        except:
+        except Exception:
             start_offline = True
 
         cfg = data_handler.load_json_secure(CONFIG_FILE)
         apply_network_settings(cfg.get("proxy", ""), cfg.get("dns", ""))
         wm.active_profile_name = active_profile
-        storage_path = os.path.join(BASE_DIR, "default_storage") if active_profile == "Default" else os.path.join(
-            PROFILES_DIR, active_profile)
+        storage_path = (
+            os.path.join(BASE_DIR, "default_storage")
+            if active_profile == "Default"
+            else os.path.join(PROFILES_DIR, active_profile)
+        )
         os.makedirs(storage_path, exist_ok=True)
         api = ChopCordAPI()
 
@@ -685,11 +778,20 @@ def main():
             raw_html = load_web_content("loading.html")
             html_content = raw_html.replace("{logo_src}", get_logo_base64())
 
-        window = webview.create_window(APP_NAME, html=html_content if start_offline else html_content, js_api=api,
-                                       width=1280, height=720, background_color='#09090b',
-                                       text_select=True, min_size=(600, 400))
+        window = webview.create_window(
+            APP_NAME,
+            html=html_content if start_offline else html_content,
+            js_api=api,
+            width=1280,
+            height=720,
+            background_color='#09090b',
+            text_select=True,
+            min_size=(600, 400)
+        )
         wm.set_window(window)
-        threading.Thread(target=connection_monitor, args=(window,), daemon=True).start()
+        threading.Thread(
+            target=connection_monitor, args=(window,), daemon=True
+        ).start()
 
         def load_app():
             time.sleep(2.0)
@@ -698,10 +800,12 @@ def main():
 
         threading.Thread(target=load_app, daemon=True).start()
         window.events.loaded += lambda: on_loaded(window)
-        webview.start(private_mode=False, storage_path=storage_path, debug=False)
+        webview.start(
+            private_mode=False, storage_path=storage_path, debug=False
+        )
 
         if wm.should_restart:
-            active_profile = wm.next_profile;
+            active_profile = wm.next_profile
             wm.should_restart = False
         else:
             break
