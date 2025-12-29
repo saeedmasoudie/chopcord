@@ -20,7 +20,7 @@ from PIL import Image, ImageDraw
 from cryptography.fernet import Fernet
 
 APP_NAME = "ChopCord"
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.0.0"
 SINGLE_INSTANCE_PORT = 53535
 
 
