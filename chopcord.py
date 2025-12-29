@@ -11,6 +11,7 @@ import http.server
 import socketserver
 import sys
 import base64
+import webbrowser
 from pathlib import Path
 import requests
 import webview
@@ -24,11 +25,15 @@ SINGLE_INSTANCE_PORT = 53535
 
 
 def get_resource_path(relative_path):
-    try:
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(base_path, relative_path)
+    base_dir = None
+
+    if getattr(sys, 'frozen', False):
+        base_dir = os.path.dirname(sys.executable)
+    else:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    return os.path.join(base_dir, relative_path)
+
 
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.expanduser("~"), ".chopcord_secure"))
@@ -39,9 +44,81 @@ MEDIA_DIR = os.path.join(BASE_DIR, "cache")
 DOWNLOADS_DIR = os.path.join(BASE_DIR, "downloads")
 ASSETS_DIR = get_resource_path("assets")
 WEB_DIR = get_resource_path("web")
+if not os.path.exists(WEB_DIR):
+    print("ERROR: web directory missing:", WEB_DIR)
+
 
 for d in [BASE_DIR, PROFILES_DIR, MEDIA_DIR, DOWNLOADS_DIR]:
     os.makedirs(d, exist_ok=True)
+
+def open_file(path):
+    try:
+        if platform.system() == "Windows":
+            os.startfile(path)
+        elif platform.system() == "Darwin":
+            subprocess.Popen(
+                ["open", path],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+        else:
+            subprocess.Popen(
+                ["xdg-open", path],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+    except Exception as e:
+        print("Open file failed:", e)
+
+
+def reveal_file(path):
+    try:
+        if platform.system() == "Windows":
+            subprocess.Popen(f'explorer /select,"{path}"')
+        elif platform.system() == "Darwin":
+            subprocess.Popen(["open", "-R", path])
+        else:
+            subprocess.Popen(["xdg-open", os.path.dirname(path)])
+    except Exception as e:
+        print("Reveal file failed:", e)
+
+def notify(title, message):
+    try:
+        system = platform.system()
+
+        if system == "Windows":
+            try:
+                from win10toast import ToastNotifier
+                ToastNotifier().show_toast(
+                    title,
+                    message,
+                    threaded=True,
+                    duration=6
+                )
+            except ImportError:
+                # No win10toast installed → ignore
+                pass
+
+        elif system == "Darwin":
+            subprocess.run(
+                [
+                    "osascript",
+                    "-e",
+                    f'display notification "{message}" with title "{title}"'
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+        else:
+            subprocess.Popen(
+                ["notify-send", title, message],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+
+    except Exception as e:
+        print("Notification error:", e)
 
 
 class SingleInstanceLock:
@@ -86,7 +163,6 @@ class UpdateManager:
                     self.release_url = data.get('html_url', self.release_url)
         except:
             pass
-
 
 updater = UpdateManager()
 
@@ -173,7 +249,7 @@ class WindowManager:
         try:
             self.active_window.destroy()
         except:
-            os._exit(0)
+            sys.exit(0)
 
     def minimize(self):
         try:
@@ -192,9 +268,12 @@ class WindowManager:
 
     def close_app(self):
         try:
-            self.active_window.destroy()
+            if self.active_window:
+                self.active_window.destroy()
         except:
-            os._exit(0)
+            pass
+        finally:
+            sys.exit(0)
 
     def restore_window(self):
         try:
@@ -258,7 +337,9 @@ def create_tray_icon(has_warning=False):
 
 
 def run_tray():
-    def on_quit(icon, item): icon.stop(); os._exit(0)
+    def on_quit(icon, item):
+        icon.stop()
+        wm.close_app()
 
     def on_show(icon, item): wm.restore_window()
 
@@ -489,29 +570,14 @@ class ChopCordAPI:
             return []
 
     def open_downloaded_file(self, filename):
-        try:
-            p = os.path.join(DOWNLOADS_DIR, os.path.basename(filename))
-            if os.path.exists(p):
-                if platform.system() == "Windows":
-                    os.startfile(p)
-                else:
-                    subprocess.Popen(["xdg-open", p])
-        except:
-            pass
+        p = os.path.join(DOWNLOADS_DIR, os.path.basename(filename))
+        if os.path.exists(p):
+            open_file(p)
 
     def show_in_folder(self, filename):
-        try:
-            p = os.path.join(DOWNLOADS_DIR, os.path.basename(filename))
-            p = os.path.abspath(p)
-            if not os.path.exists(p) and os.path.exists(DOWNLOADS_DIR): p = DOWNLOADS_DIR
-            if platform.system() == "Windows":
-                subprocess.Popen(f'explorer /select,"{p}"')
-            elif platform.system() == "Darwin":
-                subprocess.Popen(["open", "-R", p])
-            else:
-                subprocess.Popen(["xdg-open", os.path.dirname(p)])
-        except:
-            pass
+        p = os.path.join(DOWNLOADS_DIR, os.path.basename(filename))
+        if os.path.exists(p):
+            reveal_file(p)
 
     def open_downloads_folder(self):
         try:
@@ -542,11 +608,14 @@ class ChopCordAPI:
             return False
 
     def get_update_status(self):
-        return {"available": updater.update_available, "version": updater.latest_version, "url": updater.release_url}
+        return {
+            "available": updater.update_available,
+            "version": updater.latest_version,
+            "url": updater.release_url
+        }
 
-    def open_external_url(self, url):
-        import webbrowser;
-        webbrowser.open(url)
+    def open_update_page(self):
+        webbrowser.open(updater.release_url)
 
     def get_logo(self):
         return get_logo_base64()
@@ -554,12 +623,13 @@ class ChopCordAPI:
 
 def inject_core(window):
     try:
-        js_path = os.path.join(WEB_DIR, 'injector.js')
-        if os.path.exists(js_path):
-            with open(js_path, 'r', encoding='utf-8') as fh: window.evaluate_js(fh.read() + ";true;")
-    except:
-        pass
-
+        for js in ("injector.js", "update_modal.js"):
+            js_path = os.path.join(WEB_DIR, js)
+            if os.path.exists(js_path):
+                with open(js_path, "r", encoding="utf-8") as f:
+                    window.evaluate_js(f.read() + "\n")
+    except Exception as e:
+        print("JS inject failed:", e)
 
 def on_loaded(window):
     url = window.get_current_url()
@@ -570,15 +640,24 @@ def on_loaded(window):
 
 def main():
     if not app_lock.try_lock(): sys.exit(0)
-    t_update = threading.Thread(target=updater.check_updates, daemon=True)
+    t_update = threading.Thread(
+        target=updater.check_updates,
+        daemon=True
+    )
     t_update.start()
 
     active_profile = "Default"
     cfg = data_handler.load_json_secure(CONFIG_FILE)
     apply_network_settings(cfg.get("proxy", ""), cfg.get("dns", ""))
 
-    t_update.join(timeout=1.0)
     threading.Thread(target=run_tray, daemon=True).start()
+    t_update.join(timeout=1.5)
+
+    if updater.update_available:
+        notify(
+            "Update available",
+            f"Chopcord {updater.latest_version} is available"
+        )
 
     server, media_port = start_media_server()
     server_ready_event.wait(timeout=5)
