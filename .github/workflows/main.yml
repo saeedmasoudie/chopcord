@@ -15,53 +15,36 @@ defaults:
   run:
     shell: bash
 
+jobs:
 # --------------------------------------------------
 # VALIDATION
 # --------------------------------------------------
-jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-
-      - name: Install dependencies
-        run: |
+      - run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt flake8
-
-      - name: Lint
-        run: flake8 .
-
-      - name: Verify web assets
-        run: |
-          ls -la web
-          test -f web/loading.html
-          test -f web/offline.html
-          test -f web/injector.js
-          test -f web/update_modal.js
+          flake8 .
 
 # --------------------------------------------------
 # WINDOWS x64
 # --------------------------------------------------
-  build-windows:
+  build-windows-x64:
     runs-on: windows-latest
     needs: validate
-
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          architecture: "x64"
 
       - uses: ./.github/actions/setup-build
 
@@ -69,7 +52,7 @@ jobs:
         shell: pwsh
         run: |
           & .\.venv\Scripts\activate
-          $version = "${{ github.event.inputs.version }}"
+          $v="${{ github.event.inputs.version }}"
 
           python -m nuitka chopcord.py `
             --standalone `
@@ -77,33 +60,72 @@ jobs:
             --disable-console `
             --include-data-dir=web=web `
             --include-data-files=logo.png=logo.png `
-            --include-data-files=logo.ico=logo.ico `
             --windows-icon-from-ico=logo.ico `
-            --windows-product-name="Chopcord" `
-            --windows-file-version="$version" `
+            --windows-file-version="$v" `
             --output-dir=dist `
-            --output-filename="chopcord-windows-x64-v$version.exe" `
+            --output-filename="chopcord-windows-x64-v$v.exe" `
             --assume-yes-for-downloads
 
-      - name: Zip
-        shell: pwsh
-        run: |
-          Compress-Archive `
-            dist\chopcord-windows-x64-v${{ github.event.inputs.version }}.exe `
+      - run: |
+          Compress-Archive dist\chopcord-windows-x64-v${{ github.event.inputs.version }}.exe `
             dist\chopcord-windows-x64-v${{ github.event.inputs.version }}.zip
+        shell: pwsh
 
       - uses: actions/upload-artifact@v4
         with:
-          name: chopcord-windows-x64
-          path: dist/chopcord-windows-x64-v${{ github.event.inputs.version }}.zip
+          name: windows-x64
+          path: dist/chopcord-windows-x64-v*.zip
+
+# --------------------------------------------------
+# WINDOWS x86 (32-bit)
+# --------------------------------------------------
+  build-windows-x86:
+    runs-on: windows-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          architecture: "x86"
+
+      - uses: ./.github/actions/setup-build
+
+      - name: Build Windows x86
+        shell: pwsh
+        run: |
+          & .\.venv\Scripts\activate
+          $v="${{ github.event.inputs.version }}"
+
+          python -m nuitka chopcord.py `
+            --standalone `
+            --onefile `
+            --disable-console `
+            --include-data-dir=web=web `
+            --include-data-files=logo.png=logo.png `
+            --windows-icon-from-ico=logo.ico `
+            --windows-file-version="$v" `
+            --output-dir=dist `
+            --output-filename="chopcord-windows-x86-v$v.exe" `
+            --assume-yes-for-downloads
+
+      - run: |
+          Compress-Archive dist\chopcord-windows-x86-v${{ github.event.inputs.version }}.exe `
+            dist\chopcord-windows-x86-v${{ github.event.inputs.version }}.zip
+        shell: pwsh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x86
+          path: dist/chopcord-windows-x86-v*.zip
 
 # --------------------------------------------------
 # LINUX x64
 # --------------------------------------------------
-  build-linux:
+  build-linux-x64:
     runs-on: ubuntu-22.04
     needs: validate
-
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -112,93 +134,28 @@ jobs:
 
       - uses: ./.github/actions/setup-build
 
-      - name: Install system deps (pywebview)
-        run: |
+      - run: |
           sudo apt update
-          sudo apt install -y \
-            libgtk-3-0 \
-            libwebkit2gtk-4.0-37 \
-            libnss3 \
-            libxss1 \
-            libasound2
+          sudo apt install -y libgtk-3-0 libwebkit2gtk-4.0-37
 
-      - name: Build Linux x64
-        run: |
+      - run: |
           source .venv/bin/activate
-          VERSION="${{ github.event.inputs.version }}"
-
           python -m nuitka chopcord.py \
             --standalone \
             --onefile \
             --disable-console \
             --include-data-dir=web=web \
-            --include-data-files=logo.png=logo.png \
-            --linux-onefile-icon=logo.png \
             --output-dir=dist \
-            --output-filename="chopcord-linux-x64-v$VERSION" \
-            --assume-yes-for-downloads
+            --output-filename="chopcord-linux-x64-v${{ github.event.inputs.version }}"
 
-      - name: TAR
-        run: |
+      - run: |
           tar -czvf chopcord-linux-x64-v${{ github.event.inputs.version }}.tar.gz \
             -C dist chopcord-linux-x64-v${{ github.event.inputs.version }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: chopcord-linux-x64
-          path: chopcord-linux-x64-v${{ github.event.inputs.version }}.tar.gz
-
-# --------------------------------------------------
-# macOS ARM64
-# --------------------------------------------------
-  build-macos-arm64:
-    runs-on: macos-latest
-    needs: validate
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - uses: ./.github/actions/setup-build
-
-      - name: Build macOS ARM64
-        run: |
-          source .venv/bin/activate
-          export DYLD_LIBRARY_PATH=""
-          VERSION="${{ github.event.inputs.version }}"
-
-          python -m nuitka chopcord.py \
-            --standalone \
-            --macos-create-app-bundle \
-            --macos-sign-identity="-" \
-            --macos-app-name="Chopcord" \
-            --macos-app-icon=logo.icns \
-            --macos-app-version="$VERSION" \
-            --include-data-dir=web=web \
-            --include-data-files=logo.png=logo.png \
-            --assume-yes-for-downloads \
-            --output-dir=build-arm64
-
-      - name: Rename App
-        run: |
-          APP=$(find build-arm64 -name "*.app" | head -n1)
-          mv "$APP" "Chopcord-arm64-v${{ github.event.inputs.version }}.app"
-
-      - name: Create DMG
-        run: |
-          hdiutil create \
-            -volname "Chopcord ARM64" \
-            -srcfolder "Chopcord-arm64-v${{ github.event.inputs.version }}.app" \
-            -format UDZO \
-            -ov \
-            -o "chopcord-macos-arm64-v${{ github.event.inputs.version }}.dmg"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: chopcord-macos-arm64
-          path: chopcord-macos-arm64-v${{ github.event.inputs.version }}.dmg
+          name: linux-x64
+          path: chopcord-linux-x64-v*.tar.gz
 
 # -------------------------
 # RELEASE
@@ -207,7 +164,8 @@ jobs:
     name: Create GitHub Release
     runs-on: ubuntu-22.04
     needs:
-      - build-windows
+      - build-windows-x64
+      - build-windows-x86
       - build-linux
       - build-macos-arm64
       - build-macos-intel
@@ -238,6 +196,7 @@ jobs:
           TAG="v$VERSION"
 
           WIN_X64=$(find artifacts -name "*windows-x64*.zip" | head -n1 || true)
+          WIN_X86=$(find artifacts -name "*windows-x86*.zip" | head -n1 || true)
           LINUX_X64=$(find artifacts -name "*linux-x64*.tar.gz" | head -n1 || true)
           MAC_ARM_DMG=$(find artifacts -name "*macos-arm64*.dmg" | head -n1 || true)
           MAC_ARM_PKG=$(find artifacts -name "*macos-arm64*.pkg" | head -n1 || true)
@@ -251,6 +210,7 @@ jobs:
           | <div align="center">Downloads</div> | <div align="center">Compatibility</div> |
           |---|---|
           | [![Windows x64](https://img.shields.io/badge/Windows-x64-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-windows-x64-v${VERSION}.zip) | Windows 10+ |
+          | [![Windows x86](https://img.shields.io/badge/Windows-x86-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-windows-x86-v${VERSION}.zip) | Windows 7+ (32-bit, Legacy) |
           | [![macOS ARM64](https://img.shields.io/badge/macOS-ARM64-FFFFFF?style=for-the-badge&logo=apple&logoColor=black)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-macos-arm64-v${VERSION}.dmg) [![PKG ARM64](https://img.shields.io/badge/PKG-ARM64-AAAAAA?style=for-the-badge&logo=apple&logoColor=black)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-macos-arm64-v${VERSION}.pkg) <br/> [![macOS Intel](https://img.shields.io/badge/macOS-Intel-FFFFFF?style=for-the-badge&logo=apple&logoColor=black)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-macos-intel-v${VERSION}.dmg) [![PKG Intel](https://img.shields.io/badge/PKG-Intel-AAAAAA?style=for-the-badge&logo=apple&logoColor=black)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-macos-intel-v${VERSION}.pkg) | macOS 10.15+ |
           | [![Linux x64](https://img.shields.io/badge/Linux-x64-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-linux-x64-v${VERSION}.tar.gz) | GNOME / KDE |
 
@@ -261,6 +221,7 @@ jobs:
 
           for file in \
               "$WIN_X64" \
+              "$WIN_X86" \
               "$LINUX_X64" \
               "$MAC_ARM_DMG" "$MAC_ARM_PKG" \
               "$MAC_INTEL_DMG" "$MAC_INTEL_PKG"
