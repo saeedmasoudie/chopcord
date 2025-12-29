@@ -160,7 +160,7 @@ class UpdateManager:
     def check_updates(self):
         try:
             r = requests.get(
-                "https://api.github.com/repos/saeedmasoudie/chopcord/releases/latest",
+                "https://api.github.com/repos/saeedmasoudie/chopcord/releases/latest", # noqa: E501
                 timeout=5
             )
             if r.status_code == 200:
@@ -311,7 +311,7 @@ def apply_network_settings(proxy, dns):
         "--disable-renderer-backgrounding",
         "--autoplay-policy=no-user-gesture-required",
         "--enable-smooth-scrolling",
-        "--enable-features=WebRTC-H264WithOpenH264FFmpeg,NetworkService,NetworkServiceInProcess",
+        "--enable-features=WebRTC-H264WithOpenH264FFmpeg,NetworkService,NetworkServiceInProcess", # noqa: E501
         "--disable-features=DisallowNoneCookies"
     ]
     if proxy:
@@ -325,7 +325,7 @@ def apply_network_settings(proxy, dns):
         flags.append("--force-effective-connection-type=4g")
         if "1.1.1.1" in dns:
             flags.append(
-                "--dns-over-https-templates=https://cloudflare-dns.com/dns-query"
+                "--dns-over-https-templates=https://cloudflare-dns.com/dns-query" # noqa: E501
             )
         elif "8.8.8.8" in dns:
             flags.append(
