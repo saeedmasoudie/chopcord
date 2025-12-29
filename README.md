@@ -1,6 +1,6 @@
 
 <p align="center">
-<img src="logo.png" alt="Chopcord Logo" width="180"/>
+<img src="assets/logo.png" alt="Chopcord Logo" width="180"/>
 </p>
 <h1 align="center">Chopcord</h1>
 <h3 align="center">A Lightweight, Secure, Multi‑User Discord Client --- powered byPyWebview</h3>
