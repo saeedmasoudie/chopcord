@@ -203,88 +203,88 @@ jobs:
 # -------------------------
 # RELEASE
 # -------------------------
-release:
-  name: Create GitHub Release
-  runs-on: ubuntu-22.04
-  needs:
-    - build-windows
-    - build-linux
-    - build-macos-arm64
-    - build-macos-intel
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-22.04
+    needs:
+      - build-windows
+      - build-linux
+      - build-macos-arm64
+      - build-macos-intel
 
-  steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - uses: actions/download-artifact@v4
-      with:
-        path: artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
-    - name: Extract Changelog Section
-      run: |
-        VERSION="v${{ github.event.inputs.version }}"
-        awk -v ver="$VERSION" '
-          $0 ~ "^## " ver {flag=1; next}
-          flag && /^## / {exit}
-          flag {print}
-        ' CHANGELOG.md > RELEASE_NOTES.md
+      - name: Extract Changelog Section
+        run: |
+          VERSION="v${{ github.event.inputs.version }}"
+          awk -v ver="$VERSION" '
+            $0 ~ "^## " ver {flag=1; next}
+            flag && /^## / {exit}
+            flag {print}
+          ' CHANGELOG.md > RELEASE_NOTES.md
 
-    - name: Generate Checksums + Download Table
-      shell: bash
-      run: |
-        REPO="${{ github.repository }}"
-        VERSION="${{ github.event.inputs.version }}"
-        TAG="v$VERSION"
+      - name: Generate Checksums + Download Table
+        shell: bash
+        run: |
+          REPO="${{ github.repository }}"
+          VERSION="${{ github.event.inputs.version }}"
+          TAG="v$VERSION"
 
-        WIN_X64=$(find artifacts -name "*windows-x64*.zip" | head -n1 || true)
-        LINUX_X64=$(find artifacts -name "*linux-x64*.tar.gz" | head -n1 || true)
-        MAC_ARM_DMG=$(find artifacts -name "*macos-arm64*.dmg" | head -n1 || true)
-        MAC_ARM_PKG=$(find artifacts -name "*macos-arm64*.pkg" | head -n1 || true)
-        MAC_INTEL_DMG=$(find artifacts -name "*macos-intel*.dmg" | head -n1 || true)
-        MAC_INTEL_PKG=$(find artifacts -name "*macos-intel*.pkg" | head -n1 || true)
+          WIN_X64=$(find artifacts -name "*windows-x64*.zip" | head -n1 || true)
+          LINUX_X64=$(find artifacts -name "*linux-x64*.tar.gz" | head -n1 || true)
+          MAC_ARM_DMG=$(find artifacts -name "*macos-arm64*.dmg" | head -n1 || true)
+          MAC_ARM_PKG=$(find artifacts -name "*macos-arm64*.pkg" | head -n1 || true)
+          MAC_INTEL_DMG=$(find artifacts -name "*macos-intel*.dmg" | head -n1 || true)
+          MAC_INTEL_PKG=$(find artifacts -name "*macos-intel*.pkg" | head -n1 || true)
 
-        cat >> RELEASE_NOTES.md <<EOF
+          cat >> RELEASE_NOTES.md <<EOF
 
-        ## 🧩 Downloads
+          ## 🧩 Downloads
 
-        | <div align="center">Downloads</div> | <div align="center">Compatibility</div> |
-        |---|---|
-        | [![Windows x64](https://img.shields.io/badge/Windows-x64-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-windows-x64-v${VERSION}.zip) | Windows 10+ |
-        | [![macOS ARM64](https://img.shields.io/badge/macOS-ARM64-FFFFFF?style=for-the-badge&logo=apple&logoColor=black)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-macos-arm64-v${VERSION}.dmg) [![PKG ARM64](https://img.shields.io/badge/PKG-ARM64-AAAAAA?style=for-the-badge&logo=apple&logoColor=black)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-macos-arm64-v${VERSION}.pkg) <br/> [![macOS Intel](https://img.shields.io/badge/macOS-Intel-FFFFFF?style=for-the-badge&logo=apple&logoColor=black)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-macos-intel-v${VERSION}.dmg) [![PKG Intel](https://img.shields.io/badge/PKG-Intel-AAAAAA?style=for-the-badge&logo=apple&logoColor=black)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-macos-intel-v${VERSION}.pkg) | macOS 10.15+ |
-        | [![Linux x64](https://img.shields.io/badge/Linux-x64-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-linux-x64-v${VERSION}.tar.gz) | GNOME / KDE |
+          | <div align="center">Downloads</div> | <div align="center">Compatibility</div> |
+          |---|---|
+          | [![Windows x64](https://img.shields.io/badge/Windows-x64-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-windows-x64-v${VERSION}.zip) | Windows 10+ |
+          | [![macOS ARM64](https://img.shields.io/badge/macOS-ARM64-FFFFFF?style=for-the-badge&logo=apple&logoColor=black)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-macos-arm64-v${VERSION}.dmg) [![PKG ARM64](https://img.shields.io/badge/PKG-ARM64-AAAAAA?style=for-the-badge&logo=apple&logoColor=black)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-macos-arm64-v${VERSION}.pkg) <br/> [![macOS Intel](https://img.shields.io/badge/macOS-Intel-FFFFFF?style=for-the-badge&logo=apple&logoColor=black)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-macos-intel-v${VERSION}.dmg) [![PKG Intel](https://img.shields.io/badge/PKG-Intel-AAAAAA?style=for-the-badge&logo=apple&logoColor=black)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-macos-intel-v${VERSION}.pkg) | macOS 10.15+ |
+          | [![Linux x64](https://img.shields.io/badge/Linux-x64-FCC624?style=for-the-badge&logo=linux&logoColor=black)](https://github.com/${REPO}/releases/download/${TAG}/chopcord-linux-x64-v${VERSION}.tar.gz) | GNOME / KDE |
 
-        EOF
+          EOF
 
-        echo "" >> RELEASE_NOTES.md
-        echo "## 🔐 Checksums" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "## 🔐 Checksums" >> RELEASE_NOTES.md
 
-        for file in \
-            "$WIN_X64" \
-            "$LINUX_X64" \
-            "$MAC_ARM_DMG" "$MAC_ARM_PKG" \
-            "$MAC_INTEL_DMG" "$MAC_INTEL_PKG"
-        do
-          if [ -f "$file" ]; then
-            sha=$(sha256sum "$file" | cut -d' ' -f1)
-            name=$(basename "$file")
-            echo "- **$name:** \`$sha\`" >> RELEASE_NOTES.md
-          fi
-        done
+          for file in \
+              "$WIN_X64" \
+              "$LINUX_X64" \
+              "$MAC_ARM_DMG" "$MAC_ARM_PKG" \
+              "$MAC_INTEL_DMG" "$MAC_INTEL_PKG"
+          do
+            if [ -f "$file" ]; then
+              sha=$(sha256sum "$file" | cut -d' ' -f1)
+              name=$(basename "$file")
+              echo "- **$name:** \`$sha\`" >> RELEASE_NOTES.md
+            fi
+          done
 
-    - name: Publish GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: v${{ github.event.inputs.version }}
-        name: Chopcord v${{ github.event.inputs.version }}
-        body_path: RELEASE_NOTES.md
-        draft: false
-        prerelease: true
-        files: |
-          artifacts/**/*windows*.zip
-          artifacts/**/*linux*.tar.gz
-          artifacts/**/*macos*.dmg
-          artifacts/**/*macos*.pkg
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.event.inputs.version }}
+          name: Chopcord v${{ github.event.inputs.version }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: true
+          files: |
+            artifacts/**/*windows*.zip
+            artifacts/**/*linux*.tar.gz
+            artifacts/**/*macos*.dmg
+            artifacts/**/*macos*.pkg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
