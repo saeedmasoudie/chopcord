@@ -1,0 +1,52 @@
+appId: com.saeedmasoudie.chopcord
+productName: ChopCord
+copyright: Copyright © 2025 saeedmasoudie
+
+directories:
+  buildResources: assets
+  output: release
+
+files:
+  - dist/**/*
+  - electron/**/*
+  - package.json
+
+asar: true
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: assets/icon.ico
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  icon: assets/icon.png
+  category: Network
+
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  icon: assets/icon.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: assets/icon.ico
+  uninstallerIcon: assets/icon.ico
+
+dmg:
+  title: ChopCord ${version}
+  background: assets/dmg-bg.png
+
+publish:
+  provider: github
+  owner: saeedmasoudie
+  repo: chopcord
